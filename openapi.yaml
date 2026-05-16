@@ -146,7 +146,423 @@ components:
             $ref: '#/components/schemas/ProblemDetails'
     NotFound:
       description: Không tìm thấy tài nguyên
+      content:openapi: 3.1.0
+info:
+  title: Smart Campus - Camera Stream → AI Vision API
+  description: |
+    API cho Camera Stream gửi frame/image metadata khi phát hiện motion 
+    để AI Vision chạy detect và trả về kết quả nhanh.
+    Consumer: Camera Stream Service
+    Provider: AI Vision Service
+  version: 1.0.0
+  contact:
+    name: FIT4110 Teaching Team
+    email: fit4110@example.edu.vn
+
+servers:
+  - url: http://localhost:4010
+    description: Prism mock server
+  - url: https://api.smartcampus.edu.vn/ai-vision/v1
+    description: Production server
+
+tags:
+  - name: health
+    description: Kiểm tra trạng thái service
+  - name: vision
+    description: Phát hiện đối tượng trong ảnh
+  - name: models
+    description: Quản lý model AI
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Kiểm tra trạng thái service
+      tags: [health]
+      security: []
+      responses:
+        '200':
+          description: Service đang hoạt động
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /vision/detect:
+    post:
+      operationId: detectObjects
+      summary: Phát hiện đối tượng trong ảnh
+      description: |
+        Camera Stream gửi frame hoặc image metadata khi phát hiện motion.
+        AI Vision chạy detect và trả về kết quả nhanh (đồng bộ).
+      tags: [vision]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DetectRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DetectRequestMultipart'
+      responses:
+        '200':
+          description: Kết quả phát hiện thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetectResponse'
+              examples:
+                personDetected:
+                  value:
+                    detectionId: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                    timestamp: "2026-05-16T10:30:00Z"
+                    objects:
+                      - type: "person"
+                        confidence: 0.95
+                        boundingBox:
+                          x: 100
+                          y: 150
+                          width: 80
+                          height: 200
+                    riskLevel: "HIGH"
+                    processingTimeMs: 120
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /vision/detections/{detectionId}:
+    get:
+      operationId: getDetectionById
+      summary: Lấy chi tiết kết quả phát hiện theo ID
+      description: Dùng để polling nếu cần lấy lại kết quả cũ
+      tags: [vision]
+      parameters:
+        - name: detectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID của kết quả phát hiện
+      responses:
+        '200':
+          description: Chi tiết kết quả phát hiện
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetectResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: Dữ liệu đã hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /vision/models/info:
+    get:
+      operationId: getModelInfo
+      summary: Lấy thông tin model AI hiện tại
+      description: Camera có thể gọi để biết model đang dùng phiên bản nào
+      tags: [models]
+      responses:
+        '200':
+          description: Thông tin model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelInfo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status, service, version]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, down]
+        service:
+          type: string
+          example: ai-vision
+        version:
+          type: string
+          example: 1.0.0
+        timestamp:
+          type: string
+          format: date-time
+
+    DetectRequest:
+      type: object
+      required:
+        - image
+      properties:
+        image:
+          type: string
+          description: URL của ảnh cần phân tích (dùng URL để giảm payload)
+          example: "https://storage.camera.edu/frames/motion-001.jpg"
+        image_format:
+          type: string
+          enum: [url, base64]
+          default: url
+        correlation_id:
+          type: [string, "null"]
+          description: Correlation ID để trace request xuyên service (null nếu không dùng)
+          example: "req-abc123"
+        options:
+          type: [object, "null"]
+          description: Tùy chọn phát hiện (null nếu dùng mặc định)
+          properties:
+            min_confidence:
+              type: number
+              minimum: 0
+              maximum: 1
+              default: 0.7
+            detect_types:
+              type: array
+              items:
+                type: string
+                enum: [person, vehicle, animal, unknown]
+              default: ["person", "vehicle"]
+
+    DetectRequestMultipart:
+      type: object
+      properties:
+        image:
+          type: string
+          format: binary
+          description: File ảnh upload trực tiếp (dùng multipart/form-data)
+        correlation_id:
+          type: string
+        options:
+          type: string
+          description: JSON string của options
+
+    DetectResponse:
+      type: object
+      required:
+        - detectionId
+        - timestamp
+        - objects
+        - riskLevel
+      properties:
+        detectionId:
+          type: string
+          format: uuid
+          description: ID duy nhất của kết quả phát hiện
+          example: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+        timestamp:
+          type: string
+          format: date-time
+          description: Thời điểm phát hiện
+        objects:
+          type: array
+          minItems: 0
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/PersonObject'
+              - $ref: '#/components/schemas/VehicleObject'
+            discriminator:
+              propertyName: type
+        riskLevel:
+          $ref: '#/components/schemas/RiskLevel'
+        processingTimeMs:
+          type: integer
+          description: Thời gian xử lý (milliseconds)
+          example: 120
+
+    PersonObject:
+      type: object
+      required:
+        - type
+        - confidence
+        - boundingBox
+      properties:
+        type:
+          type: string
+          const: person
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Độ tin cậy (0-1)
+        boundingBox:
+          $ref: '#/components/schemas/BoundingBox'
+        face_id:
+          type: [string, "null"]
+          description: ID khuôn mặt (null nếu không nhận diện được)
+        is_suspicious:
+          type: boolean
+          default: false
+          description: Có nằm trong danh sách đối tượng đáng ngờ không?
+
+    VehicleObject:
+      type: object
+      required:
+        - type
+        - confidence
+        - boundingBox
+      properties:
+        type:
+          type: string
+          const: vehicle
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        boundingBox:
+          $ref: '#/components/schemas/BoundingBox'
+        vehicle_type:
+          type: string
+          enum: [car, truck, motorcycle, bus, unknown]
+        license_plate:
+          type: [string, "null"]
+          description: Biển số xe (null nếu không đọc được)
+        color:
+          type: [string, "null"]
+
+    BoundingBox:
+      type: object
+      required: [x, y, width, height]
+      properties:
+        x:
+          type: integer
+          description: Tọa độ X góc trên bên trái (pixel)
+        y:
+          type: integer
+          description: Tọa độ Y góc trên bên trái (pixel)
+        width:
+          type: integer
+          description: Chiều rộng (pixel)
+        height:
+          type: integer
+          description: Chiều cao (pixel)
+
+    RiskLevel:
+      type: string
+      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+      description: |
+        Mức độ rủi ro dựa trên đối tượng phát hiện:
+        - LOW: Không có đối tượng hoặc đối tượng quen thuộc
+        - MEDIUM: Người lạ hoặc xe lạ
+        - HIGH: Người trong khu vực cấm hoặc biển số đen
+        - CRITICAL: Nhiều đối tượng đáng ngờ cùng lúc
+      example: "HIGH"
+
+    ModelInfo:
+      type: object
+      required: [modelId, version, name, lastUpdated]
+      properties:
+        modelId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "YOLOv8-Face-Vehicle"
+        version:
+          type: string
+          example: "2.1.0"
+        lastUpdated:
+          type: string
+          format: date-time
+        supportedObjects:
+          type: array
+          items:
+            type: string
+          example: ["person", "vehicle", "animal"]
+        minConfidence:
+          type: number
+          default: 0.7
+
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          example: "https://api.smartcampus.edu.vn/errors/bad-request"
+        title:
+          type: string
+          example: "Bad Request"
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: [string, "null"]
+          example: "Missing required field: image"
+        instance:
+          type: [string, "null"]
+          format: uri
+          example: "/vision/detect"
+        correlation_id:
+          type: [string, "null"]
+          description: Correlation ID để trace lỗi
+
+  responses:
+    BadRequest:
+      description: Request không hợp lệ (thiếu field, sai format)
       content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    Unauthorized:
+      description: Thiếu hoặc sai Bearer token
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    PayloadTooLarge:
+      description: Kích thước ảnh vượt quá giới hạn (mặc định 10MB)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    TooManyRequests:
+      description: Vượt quá rate limit (100 requests/phút)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    NotFound:
+      description: Không tìm thấy detectionId
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    InternalServerError:
+      description: Lỗi server nội bộ
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetails'

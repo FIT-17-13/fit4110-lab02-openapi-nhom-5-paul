@@ -1,0 +1,1 @@
+Replace with actual screenshot PNG after running Prism and curl.
