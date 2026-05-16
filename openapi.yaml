@@ -1,160 +1,12 @@
 openapi: 3.1.0
 info:
-  title: Smart Campus Access Policy API
-  version: 1.0.0
-  description: >
-    Contract-first API giữa Access Control Service (Consumer)
-    và Core Policy Service (Provider) để tra cứu và đánh giá chính sách truy cập.
-servers:
-  - url: http://localhost:4010
-    description: Prism mock server
-tags:
-  - name: health
-  - name: policies
-security:
-  - bearerAuth: []
-
-paths:
-  /health:
-    get:
-      operationId: getHealth
-      summary: Kiểm tra trạng thái service
-      tags: [health]
-      security: []
-      responses:
-        '200':
-          description: Service hoạt động bình thường
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthStatus'
-
-  /policies:
-    get:
-      operationId: listPolicies
-      summary: Lấy danh sách chính sách truy cập
-      tags: [policies]
-      parameters:
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: Danh sách chính sách
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PolicyPage'
-
-  /policies/{policyId}:
-    get:
-      operationId: getPolicyById
-      summary: Lấy chi tiết một chính sách
-      tags: [policies]
-      parameters:
-        - name: policyId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Thông tin chính sách
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccessPolicy'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /access-decisions:
-    post:
-      operationId: evaluateAccess
-      summary: Đánh giá quyền truy cập
-      tags: [policies]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AccessEvaluationRequest'
-      responses:
-        '200':
-          description: Kết quả đánh giá truy cập
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccessDecision'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /access-decisions/{decisionId}:
-    get:
-      operationId: getDecisionById
-      summary: Tra cứu quyết định truy cập đã tạo
-      tags: [policies]
-      parameters:
-        - name: decisionId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Chi tiết quyết định
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccessDecision'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-components:
-  parameters:
-    Limit:
-      name: limit
-      in: query
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 20
-
-  responses:
-    BadRequest:
-      description: Dữ liệu đầu vào không hợp lệ
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-    UnprocessableEntity:
-      description: Không thể xử lý nghiệp vụ
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-    InternalServerError:
-      description: Lỗi hệ thống
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-    NotFound:
-      description: Không tìm thấy tài nguyên
-      content:openapi: 3.1.0
-info:
   title: Smart Campus - Camera Stream → AI Vision API
+  version: 1.0.0
   description: |
-    API cho Camera Stream gửi frame/image metadata khi phát hiện motion 
+    API cho Camera Stream gửi frame hoặc image metadata khi phát hiện motion 
     để AI Vision chạy detect và trả về kết quả nhanh.
     Consumer: Camera Stream Service
     Provider: AI Vision Service
-  version: 1.0.0
   contact:
     name: FIT4110 Teaching Team
     email: fit4110@example.edu.vn
@@ -181,6 +33,7 @@ paths:
     get:
       operationId: getHealth
       summary: Kiểm tra trạng thái service
+      description: Endpoint kiểm tra service AI Vision còn hoạt động hay không. Dùng cho monitoring và health check của camera trước khi gửi request.
       tags: [health]
       security: []
       responses:
@@ -197,7 +50,7 @@ paths:
       summary: Phát hiện đối tượng trong ảnh
       description: |
         Camera Stream gửi frame hoặc image metadata khi phát hiện motion.
-        AI Vision chạy detect và trả về kết quả nhanh (đồng bộ).
+        AI Vision chạy detect và trả về kết quả nhanh (đồng bộ, trong vòng 5 giây).
       tags: [vision]
       requestBody:
         required: true
@@ -215,21 +68,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DetectResponse'
-              examples:
-                personDetected:
-                  value:
-                    detectionId: "d290f1ee-6c54-4b01-90e6-d701748f0851"
-                    timestamp: "2026-05-16T10:30:00Z"
-                    objects:
-                      - type: "person"
-                        confidence: 0.95
-                        boundingBox:
-                          x: 100
-                          y: 150
-                          width: 80
-                          height: 200
-                    riskLevel: "HIGH"
-                    processingTimeMs: 120
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -245,7 +83,7 @@ paths:
     get:
       operationId: getDetectionById
       summary: Lấy chi tiết kết quả phát hiện theo ID
-      description: Dùng để polling nếu cần lấy lại kết quả cũ
+      description: Dùng để polling nếu cần lấy lại kết quả cũ hoặc gửi lại cho Core Business.
       tags: [vision]
       parameters:
         - name: detectionId
@@ -275,7 +113,7 @@ paths:
     get:
       operationId: getModelInfo
       summary: Lấy thông tin model AI hiện tại
-      description: Camera có thể gọi để biết model đang dùng phiên bản nào
+      description: Camera có thể gọi để biết model đang dùng phiên bản nào, hỗ trợ debug và monitoring.
       tags: [models]
       responses:
         '200':
@@ -299,20 +137,29 @@ components:
   schemas:
     HealthStatus:
       type: object
+      additionalProperties: false
       required: [status, service, version]
       properties:
         status:
           type: string
           enum: [ok, degraded, down]
+          description: Trạng thái service.
+          example: ok
         service:
           type: string
+          minLength: 2
+          maxLength: 80
+          description: Tên service.
           example: ai-vision
         version:
           type: string
+          description: Phiên bản service.
           example: 1.0.0
         timestamp:
           type: string
           format: date-time
+          description: Thời điểm kiểm tra.
+          example: '2026-05-16T10:30:00Z'
 
     DetectRequest:
       type: object
@@ -344,7 +191,7 @@ components:
               type: array
               items:
                 type: string
-                enum: [person, vehicle, animal, unknown]
+                enum: [person, vehicle, animal]
               default: ["person", "vehicle"]
 
     DetectRequestMultipart:
@@ -356,6 +203,7 @@ components:
           description: File ảnh upload trực tiếp (dùng multipart/form-data)
         correlation_id:
           type: string
+          description: Correlation ID để trace request
         options:
           type: string
           description: JSON string của options
@@ -377,6 +225,7 @@ components:
           type: string
           format: date-time
           description: Thời điểm phát hiện
+          example: '2026-05-16T10:30:00Z'
         objects:
           type: array
           minItems: 0
@@ -403,16 +252,19 @@ components:
         type:
           type: string
           const: person
+          description: Loại đối tượng
         confidence:
           type: number
           minimum: 0
           maximum: 1
           description: Độ tin cậy (0-1)
+          example: 0.95
         boundingBox:
           $ref: '#/components/schemas/BoundingBox'
         face_id:
           type: [string, "null"]
           description: ID khuôn mặt (null nếu không nhận diện được)
+          example: null
         is_suspicious:
           type: boolean
           default: false
@@ -428,20 +280,28 @@ components:
         type:
           type: string
           const: vehicle
+          description: Loại đối tượng
         confidence:
           type: number
           minimum: 0
           maximum: 1
+          description: Độ tin cậy (0-1)
+          example: 0.88
         boundingBox:
           $ref: '#/components/schemas/BoundingBox'
         vehicle_type:
           type: string
           enum: [car, truck, motorcycle, bus, unknown]
+          description: Loại xe
+          example: car
         license_plate:
           type: [string, "null"]
           description: Biển số xe (null nếu không đọc được)
+          example: "29A-12345"
         color:
           type: [string, "null"]
+          description: Màu xe (null nếu không xác định được)
+          example: "white"
 
     BoundingBox:
       type: object
@@ -450,15 +310,19 @@ components:
         x:
           type: integer
           description: Tọa độ X góc trên bên trái (pixel)
+          example: 100
         y:
           type: integer
           description: Tọa độ Y góc trên bên trái (pixel)
+          example: 150
         width:
           type: integer
           description: Chiều rộng (pixel)
+          example: 80
         height:
           type: integer
           description: Chiều cao (pixel)
+          example: 200
 
     RiskLevel:
       type: string
@@ -473,53 +337,76 @@ components:
 
     ModelInfo:
       type: object
-      required: [modelId, version, name, lastUpdated]
+      required: [modelId, name, version, lastUpdated]
       properties:
         modelId:
           type: string
           format: uuid
+          description: ID của model
+          example: "550e8400-e29b-41d4-a716-446655440000"
         name:
           type: string
+          description: Tên model
           example: "YOLOv8-Face-Vehicle"
         version:
           type: string
+          description: Phiên bản model
           example: "2.1.0"
         lastUpdated:
           type: string
           format: date-time
+          description: Thời điểm cập nhật model
+          example: '2026-05-01T00:00:00Z'
         supportedObjects:
           type: array
           items:
             type: string
+          description: Các loại đối tượng hỗ trợ
           example: ["person", "vehicle", "animal"]
         minConfidence:
           type: number
+          minimum: 0
+          maximum: 1
+          description: Ngưỡng confidence tối thiểu
           default: 0.7
+          example: 0.7
 
     Problem:
       type: object
+      additionalProperties: false
       required: [type, title, status]
       properties:
         type:
           type: string
           format: uri
+          description: URI định danh loại lỗi.
           example: "https://api.smartcampus.edu.vn/errors/bad-request"
         title:
           type: string
+          minLength: 3
+          maxLength: 120
+          description: Tiêu đề lỗi ngắn gọn.
           example: "Bad Request"
         status:
           type: integer
+          minimum: 400
+          maximum: 599
+          description: HTTP status code.
           example: 400
         detail:
           type: [string, "null"]
+          maxLength: 500
+          description: Mô tả chi tiết lỗi.
           example: "Missing required field: image"
         instance:
           type: [string, "null"]
           format: uri
-          example: "/vision/detect"
+          description: URI của request gây lỗi.
+          example: "https://api.smartcampus.edu.vn/vision/detect"
         correlation_id:
           type: [string, "null"]
-          description: Correlation ID để trace lỗi
+          description: Correlation ID để trace lỗi.
+          example: "req-abc123"
 
   responses:
     BadRequest:
@@ -528,9 +415,36 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+          example:
+            type: "https://api.smartcampus.edu.vn/errors/bad-request"
+            title: "Bad Request"
+            status: 400
+            detail: "Missing required field: image"
+            instance: "https://api.smartcampus.edu.vn/vision/detect"
+            correlation_id: "req-abc123"
 
     Unauthorized:
-      description: Thiếu hoặc sai Bearer token
+      description: Thiếu hoặc sai thông tin xác thực
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: "https://api.smartcampus.edu.vn/errors/unauthorized"
+            title: "Unauthorized"
+            status: 401
+            detail: "Missing or invalid Bearer token"
+            instance: "https://api.smartcampus.edu.vn/vision/detect"
+
+    Forbidden:
+      description: Không có quyền thực hiện thao tác
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    NotFound:
+      description: Resource không tồn tại
       content:
         application/problem+json:
           schema:
@@ -550,172 +464,23 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
 
-    NotFound:
-      description: Không tìm thấy detectionId
+    Conflict:
+      description: Xung đột nghiệp vụ hoặc trùng idempotency key
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    UnprocessableEntity:
+      description: Payload đúng định dạng nhưng không hợp lệ về nghiệp vụ
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
 
     InternalServerError:
-      description: Lỗi server nội bộ
+      description: Lỗi không mong muốn phía server
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-  schemas:
-    HealthStatus:
-      type: object
-      required: [status, service, time]
-      properties:
-        status:
-          type: string
-          const: ok
-        service:
-          type: string
-        time:
-          type: string
-          format: date-time
-
-    PolicyPage:
-      type: object
-      required: [items, total]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/AccessPolicy'
-        total:
-          type: integer
-
-    AccessPolicy:
-      type: object
-      required:
-        - id
-        - policyName
-        - resourceType
-        - allowedRoles
-        - status
-        - createdAt
-      properties:
-        id:
-          type: string
-          format: uuid
-        policyName:
-          type: string
-        description:
-          type: [string, "null"]
-        resourceType:
-          type: string
-          enum: [BUILDING, ROOM, LAB, PARKING]
-        allowedRoles:
-          type: array
-          items:
-            type: string
-        status:
-          type: string
-          enum: [ACTIVE, INACTIVE]
-        createdAt:
-          type: string
-          format: date-time
-
-    AccessEvaluationRequest:
-      type: object
-      required:
-        - userId
-        - role
-        - resourceId
-        - resourceType
-        - accessMethod
-      properties:
-        userId:
-          type: string
-          format: uuid
-        role:
-          type: string
-        resourceId:
-          type: string
-        resourceType:
-          type: string
-        accessMethod:
-          $ref: '#/components/schemas/AccessMethod'
-
-    AccessMethod:
-      oneOf:
-        - $ref: '#/components/schemas/CardMethod'
-        - $ref: '#/components/schemas/FaceMethod'
-      discriminator:
-        propertyName: methodType
-        mapping:
-          CARD: '#/components/schemas/CardMethod'
-          FACE: '#/components/schemas/FaceMethod'
-
-    CardMethod:
-      type: object
-      required: [methodType, cardId]
-      properties:
-        methodType:
-          type: string
-          const: CARD
-        cardId:
-          type: string
-
-    FaceMethod:
-      type: object
-      required: [methodType, faceToken]
-      properties:
-        methodType:
-          type: string
-          const: FACE
-        faceToken:
-          type: string
-
-    AccessDecision:
-      type: object
-      required:
-        - decisionId
-        - result
-        - reason
-        - evaluatedAt
-      properties:
-        decisionId:
-          type: string
-          format: uuid
-        result:
-          type: string
-          enum: [ALLOW, DENY]
-        reason:
-          type: string
-        matchedPolicyId:
-          type: [string, "null"]
-          format: uuid
-        evaluatedAt:
-          type: string
-          format: date-time
-
-    ProblemDetails:
-      type: object
-      required: [type, title, status]
-      properties:
-        type:
-          type: string
-          format: uri
-        title:
-          type: string
-        status:
-          type: integer
-        detail:
-          type: [string, "null"]
-        instance:
-          type: [string, "null"]
-          format: uri
