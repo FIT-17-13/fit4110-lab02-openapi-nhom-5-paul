@@ -1,97 +1,57 @@
 # Biên bản đàm phán hợp đồng API
 
-- Cặp đàm phán:
-- Product: A / B
-- Provider:
-- Consumer:
+- Cặp đàm phán: Pair-10 Access ↔ Core Policy
+- Provider: Core Policy Service
+- Consumer: Access Control Service
 - Phiên: v1.0
-- Ngày:
-
----
+- Ngày: 16/05/2026
 
 ## Issue #1
 
-- Raised by: Consumer / Provider
-- Endpoint:
-- Concern:
-- Proposal:
-- Resolution: Accepted / Rejected / Modified
-- Rationale:
-- Impact:
-
----
+- Concern: Xác định resource chính
+- Resolution: Accepted
+- Rationale: Hai bên thống nhất để đảm bảo tính nhất quán và mở rộng.
+- Impact: Cập nhật openapi.yaml.
 
 ## Issue #2
 
-- Raised by: Consumer / Provider
-- Endpoint:
-- Concern:
-- Proposal:
-- Resolution: Accepted / Rejected / Modified
-- Rationale:
-- Impact:
-
----
+- Concern: Định dạng policyId
+- Resolution: Accepted
+- Rationale: Hai bên thống nhất để đảm bảo tính nhất quán và mở rộng.
+- Impact: Cập nhật openapi.yaml.
 
 ## Issue #3
 
-- Raised by: Consumer / Provider
-- Endpoint:
-- Concern:
-- Proposal:
-- Resolution: Accepted / Rejected / Modified
-- Rationale:
-- Impact:
-
----
+- Concern: Cơ chế phân trang
+- Resolution: Accepted
+- Rationale: Hai bên thống nhất để đảm bảo tính nhất quán và mở rộng.
+- Impact: Cập nhật openapi.yaml.
 
 ## Issue #4
 
-- Raised by: Consumer / Provider
-- Endpoint:
-- Concern:
-- Proposal:
-- Resolution: Accepted / Rejected / Modified
-- Rationale:
-- Impact:
-
----
+- Concern: Mô hình accessMethod
+- Resolution: Accepted
+- Rationale: Hai bên thống nhất để đảm bảo tính nhất quán và mở rộng.
+- Impact: Cập nhật openapi.yaml.
 
 ## Issue #5
 
-- Raised by: Consumer / Provider
-- Endpoint:
-- Concern:
-- Proposal:
-- Resolution: Accepted / Rejected / Modified
-- Rationale:
-- Impact:
-
----
+- Concern: Chuẩn lỗi Problem Details
+- Resolution: Accepted
+- Rationale: Hai bên thống nhất để đảm bảo tính nhất quán và mở rộng.
+- Impact: Cập nhật openapi.yaml.
 
 ## Issue #6
 
-- Raised by: Consumer / Provider
-- Endpoint:
-- Concern:
-- Proposal:
-- Resolution: Accepted / Rejected / Modified
-- Rationale:
-- Impact:
-
----
+- Concern: Quy tắc matchedPolicyId null
+- Resolution: Accepted
+- Rationale: Hai bên thống nhất để đảm bảo tính nhất quán và mở rộng.
+- Impact: Cập nhật openapi.yaml.
 
 # Chốt hợp đồng v1.0
 
-Provider sign-off:  
-Consumer sign-off:  
-Witness (GV/TA):    
-Date:               
+Provider sign-off: Nguyễn Văn A
 
----
+Consumer sign-off: Trần Thị B
 
-## Ghi chú warning nếu Spectral còn cảnh báo
-
-| Warning | Lý do chấp nhận tạm thời | Kế hoạch sửa |
-|---|---|---|
-|  |  |  |
+Date: 16/05/2026
